@@ -3,6 +3,7 @@
 
 #include <optional>
 
+#include "Common/logger_useful.h"
 #include <Common/escapeForFileName.h>
 #include <Common/Exception.h>
 
@@ -39,6 +40,9 @@
 #include <base/insertAtEnd.h>
 
 #include <cassert>
+#include <Storages/SelectQueryInfo.h>
+#include <Parsers/ASTInsertQuery.h>
+
 
 
 namespace DB
@@ -345,12 +349,15 @@ static std::chrono::seconds getLockTimeout(ContextPtr local_context)
 Pipe StorageStripeLog::read(
     const Names & column_names,
     const StorageSnapshotPtr & storage_snapshot,
-    SelectQueryInfo & /*query_info*/,
+    SelectQueryInfo & query_info,
     ContextPtr local_context,
     QueryProcessingStage::Enum /*processed_stage*/,
     const size_t /*max_block_size*/,
     size_t num_streams)
 {
+    auto & select = query_info.query->as<ASTSelectQuery &>();
+    LOG_FATAL(&Poco::Logger::root(), "read");
+
     storage_snapshot->check(column_names);
 
     auto lock_timeout = getLockTimeout(local_context);
@@ -368,13 +375,20 @@ Pipe StorageStripeLog::read(
         = std::make_shared<IndexForNativeFormat>(indices.extractIndexForColumns(NameSet{column_names.begin(), column_names.end()}));
 
     size_t size = indices_for_selected_columns->blocks.size();
+    size_t cursor = 0;
+    if (select.is_cursor != 0) {
+        LOG_FATAL(&Poco::Logger::root(), "is cursor прочитали {}", select.is_cursor);
+        cursor = select.is_cursor;
+    }
+
+
     if (num_streams > size)
         num_streams = size;
 
     ReadSettings read_settings = local_context->getReadSettings();
     Pipes pipes;
 
-    for (size_t stream = 0; stream < num_streams; ++stream)
+    for (size_t stream = cursor; stream < num_streams; ++stream)
     {
         IndexForNativeFormat::Blocks::const_iterator begin = indices_for_selected_columns->blocks.begin();
         IndexForNativeFormat::Blocks::const_iterator end = indices_for_selected_columns->blocks.begin();

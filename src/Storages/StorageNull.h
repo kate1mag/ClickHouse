@@ -2,10 +2,15 @@
 
 #include <Core/NamesAndTypes.h>
 #include <Storages/IStorage.h>
-#include <Processors/Sources/NullSource.h>
+#include <Processors/Sources/Subscriber.h>
 #include <Processors/Sinks/SinkToStorage.h>
 #include <QueryPipeline/Pipe.h>
+#include <Formats/IndexForNativeFormat.h>
+#include <shared_mutex>
 
+#include <mutex>
+#include <condition_variable>
+#include <Disks/IDisk.h>
 
 namespace DB
 {
@@ -15,6 +20,10 @@ namespace DB
   */
 class StorageNull final : public IStorage
 {
+friend class NullSource;
+friend class NullSinkToStorage;
+friend class StorageNullSink;
+friend class StorageNullSource;
 public:
     StorageNull(
         const StorageID & table_id_, ColumnsDescription columns_description_, ConstraintsDescription constraints_, const String & comment)
@@ -32,22 +41,15 @@ public:
     Pipe read(
         const Names & column_names,
         const StorageSnapshotPtr & storage_snapshot,
-        SelectQueryInfo &,
-        ContextPtr /*context*/,
-        QueryProcessingStage::Enum /*processing_stage*/,
-        size_t /*max_block_size*/,
-        size_t /*num_streams*/) override
-    {
-        return Pipe(
-            std::make_shared<NullSource>(storage_snapshot->getSampleBlockForColumns(column_names)));
-    }
+        SelectQueryInfo & query_info,
+        ContextPtr context,
+        QueryProcessingStage::Enum processed_stage,
+        size_t max_block_size,
+        size_t num_streams) override;
 
     bool supportsParallelInsert() const override { return true; }
 
-    SinkToStoragePtr write(const ASTPtr &, const StorageMetadataPtr & metadata_snapshot, ContextPtr) override
-    {
-        return std::make_shared<NullSinkToStorage>(metadata_snapshot->getSampleBlock());
-    }
+    SinkToStoragePtr write(const ASTPtr &, const StorageMetadataPtr & metadata_snapshot, ContextPtr) override;
 
     void checkAlterIsPossible(const AlterCommands & commands, ContextPtr context) const override;
 
@@ -61,7 +63,5 @@ public:
     {
         return {0};
     }
-
 };
-
 }

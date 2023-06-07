@@ -14,6 +14,8 @@
 #include <Parsers/ASTExpressionList.h>
 #include <Parsers/ASTInterpolateElement.h>
 #include <Parsers/ASTIdentifier.h>
+#include "Parsers/IAST_fwd.h"
+#include "Common/logger_useful.h"
 
 
 namespace DB
@@ -65,6 +67,8 @@ bool ParserSelectQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     ParserKeyword s_first("FIRST");
     ParserKeyword s_next("NEXT");
     ParserKeyword s_interpolate("INTERPOLATE");
+    ParserKeyword s_stream("STREAM");
+    ParserKeyword s_cursor("CURSOR");
 
     ParserNotEmptyExpressionList exp_list(false);
     ParserNotEmptyExpressionList exp_list_for_with_clause(false);
@@ -78,6 +82,7 @@ bool ParserSelectQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
     ParserToken close_bracket(TokenType::ClosingRoundBracket);
 
     ASTPtr with_expression_list;
+    ASTPtr cursor_list;
     ASTPtr select_expression_list;
     ASTPtr tables;
     ASTPtr prewhere_expression;
@@ -106,6 +111,22 @@ bool ParserSelectQuery::parseImpl(Pos & pos, ASTPtr & node, Expected & expected)
             if (with_expression_list->children.empty())
                 return false;
         }
+    }
+
+    if (s_stream.ignore(pos, expected)) {
+        select_query->is_stream = true;
+    }
+
+    if (s_cursor.ignore(pos, expected)) {
+        if (!ParserList(std::make_unique<ParserWithElement>(), std::make_unique<ParserToken>(TokenType::Comma))
+                     .parse(pos, cursor_list, expected)) {
+                        return false;
+            }
+        LOG_FATAL(&Poco::Logger::root(), "select {}", (*cursor_list).size());
+        auto value = (*((*cursor_list).children.begin()));
+        auto help1 = stoi(value->getColumnName());
+        LOG_FATAL(&Poco::Logger::root(), "select {}", help1);
+        select_query->is_cursor = help1;
     }
 
     /// FROM database.table or FROM table or FROM (subquery) or FROM tableFunction(...)

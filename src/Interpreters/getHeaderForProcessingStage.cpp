@@ -7,7 +7,6 @@
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTTablesInSelectQuery.h>
 #include <Processors/Sources/SourceFromSingleChunk.h>
-
 namespace DB
 {
 

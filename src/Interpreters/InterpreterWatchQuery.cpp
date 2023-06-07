@@ -19,7 +19,6 @@ limitations under the License. */
 #include <QueryPipeline/QueryPipelineBuilder.h>
 #include <Storages/IStorage.h>
 
-
 namespace DB
 {
 

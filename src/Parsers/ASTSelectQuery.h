@@ -88,6 +88,8 @@ public:
     bool group_by_with_constant_keys = false;
     bool group_by_with_grouping_sets = false;
     bool limit_with_ties = false;
+    bool is_stream = false;
+    int is_cursor = 0;
 
     ASTPtr & refSelect()    { return getExpression(Expression::SELECT); }
     ASTPtr & refTables()    { return getExpression(Expression::TABLES); }

@@ -234,7 +234,6 @@ Pipe StorageMemory::read(
     size_t num_streams)
 {
     storage_snapshot->check(column_names);
-
     const auto & snapshot_data = assert_cast<const SnapshotData &>(*storage_snapshot->data);
     auto current_data = snapshot_data.blocks;
 

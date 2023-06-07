@@ -2,11 +2,17 @@
 #include <Storages/StorageFactory.h>
 #include <Storages/AlterCommands.h>
 
+#include <Storages/SelectQueryInfo.h>
+#include <Parsers/ASTInsertQuery.h>
 #include <Interpreters/InterpreterAlterQuery.h>
 #include <Interpreters/Context.h>
 #include <Databases/IDatabase.h>
 
+#include <Processors/Sources/NullSource.h>
+#include <Processors/Sources/StorageNullSource.h>
 #include <IO/WriteHelpers.h>
+#include <DataTypes/DataTypesNumber.h>
+#include <Common/logger_useful.h>
 
 
 namespace DB
@@ -17,6 +23,24 @@ namespace ErrorCodes
     extern const int NOT_IMPLEMENTED;
     extern const int NUMBER_OF_ARGUMENTS_DOESNT_MATCH;
     extern const int ALTER_OF_COLUMN_IS_FORBIDDEN;
+}
+
+Pipe StorageNull::read(
+    const Names & column_names,
+    const StorageSnapshotPtr & storage_snapshot,
+    SelectQueryInfo & /*query_info*/,
+    ContextPtr /*context*/,
+    QueryProcessingStage::Enum /*processing_stage*/,
+    size_t /*max_block_size*/,
+    size_t /*num_streams*/)
+{
+    return Pipe(
+            std::make_shared<NullSource>(storage_snapshot->getSampleBlockForColumns(column_names)));
+}
+
+SinkToStoragePtr StorageNull::write(const ASTPtr & /*query*/, const StorageMetadataPtr & metadata_snapshot, ContextPtr /*context*/) 
+{
+    return std::make_shared<NullSinkToStorage>(metadata_snapshot->getSampleBlock());
 }
 
 
